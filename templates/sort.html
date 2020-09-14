@@ -1,0 +1,60 @@
+<html>
+  <head>
+    <title>Flask example</title>
+    <script src="{{ url_for('static', filename='js/jquery-1.12.4.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/jquery-ui.js') }}"></script>
+    <script>
+        $(function(){
+			$('#submitNow').click(function(event, ui) {
+                    var postData = $('#sortMe').sortable('serialize');
+
+                    $.ajax({
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(postData),
+                        dataType: 'json',
+                        url: '/submitrank',
+                        success: function(response) {
+                          location.reload(true);
+                        }
+                    });
+                    
+                    
+                });
+			
+            $('#sortMe').sortable();
+
+
+        $("img").dblclick(function() {
+            $(this).toggleClass("big-im");    
+        });
+        });
+        
+
+    </script>
+    <link rel= "stylesheet" type= "text/css" href= "static/style.css">
+  </head>
+  <div>
+  <body>
+     <div class="im-col">
+    <ul id="sortMe">
+    {% for i, fn in image_info %}
+        <li id="item_{{ i }}"><img class="small-im" src="/static/im/{{ fn }}"></li>
+    {% endfor %}
+    </ul>
+    </div>
+	<div class="meta-col">
+	<input type="submit" value="Submit Ranking" id="submitNow"></input>
+	</div>
+	<div class="meta-col">
+	<h1>Please rearrange the images on the left in terms in increasing noise, then click the submit button</h1>
+	<h2> Double click to enlarge/shrink each image</h2>
+	<h2>Current user: {{ user }}</h2>
+	<a href="/user">Change user</a>
+	<br>
+	<a href="/adduser">Add new user</a>
+	<p>Currently working on display set {{ display_set_id }}. Display sets remaining: {{ outstanding_sets }}
+	
+	</div>
+  </body>
+</html>

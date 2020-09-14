@@ -1,0 +1,41 @@
+ul {
+  //list-style-type: none;
+  padding-left: 50px;
+  margin: 0;
+  //padding: 0;
+  overflow: hidden;
+}
+
+li {
+  //float: left;
+}
+
+.im-col {
+width: 50%;
+float: left;
+}
+
+.meta-col {
+  width: 25%;
+  float: left;
+}
+
+.small-im {
+  height: 160px;
+  width: 160px;
+}
+
+.big-im {
+  height: auto;
+  width: auto;
+}
+
+body {
+    background-color: black;
+    color: white;
+    
+}
+
+a {
+  color: yellow;
+}
