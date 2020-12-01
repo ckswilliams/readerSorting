@@ -7,6 +7,7 @@ from wtforms.ext.sqlalchemy.orm import model_form
 from flask_wtf import FlaskForm
 from wtforms import SelectField, TextField
 import json
+import argparse
 
 
 app = Flask(__name__, static_url_path='/static')
@@ -206,9 +207,40 @@ def adduser():
         return redirect('/')
         
     return render_template('user.html',
-                           form=form)
+                           form=form,
+                           form_title='Add a new user')
+
+
 
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    
+    parser = argparse.ArgumentParser(description='Webapp for easy sorting of medical images')
+    parser.add_argument("-p", "--port", type=int,
+                        action="store", default=5000)
+    parser.add_argument("-d", "--debug", action='store_true')
+    parser.add_argument('-l', '--loadcsv', action='store')
+    parser.add_argument('-e', '--export', action='store')
+    
+    args = parser.parse_args()
+    
+    if args.debug:
+        logger.info('Dropping database')
+        db.drop_all()
+        db.create_all()
+        logger.info('Populating DB with dummy data')
+        add_dummy_data()
+    
+    if args.loadcsv != '':
+        db.drop_all()
+        db.create_all()
+        load_csv_data(args.loadcsv)
+        
+    print(args.loadcsv)
+    
+    
+    port = args.port
+    
+    
+    app.run(debug=True, port=port)
