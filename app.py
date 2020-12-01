@@ -67,58 +67,85 @@ class User(db.Model):
     def __init__(self, name):
         self.name = name
     
-db.drop_all()
-db.create_all()
 
+def load_csv_data(dataset_fn):
+    "Load data into the database from a csv file"
+    df = pd.read_csv(dataset_fn)
+    populate = df.groupby('dataset_id').fn.apply(list).to_dict()
+    for dataset_id, fns in populate.items():
+        ds = DisplaySet()        
+        db.session.add(ds)
+        db.session.commit()
+        
+        for fn in fns:
+            di = DisplayItem(ds.id, fn)
+            db.session.add(di)
+        db.session.commit()
+
+    
 
 def add_dummy_data():
-    
+    "Function to put in some simulated debug data"
     u = User('Chris')
     u2 = User('Jimothy')
     db.session.add(u)
     db.session.add(u2)
     db.session.commit()
     
-    
-    #Make 3 display_sets
+    #Make 3 fake display_sets
     for i in range(1,4):
         ds = DisplaySet()        
         db.session.add(ds)
         db.session.commit()
         
-        #Add 5 dispaly items to each display set
+        #Add 5 fake display items to each fake display set
         for j in range(1,6):
             di = DisplayItem(ds.id, f'{i}_{j}.png')
             db.session.add(di)  
         db.session.commit()
     
-
-    
+    sri = SetRankInstance(user_id=2, display_set_id=1, comment='hi')
+    db.session.add(sri)
+    db.session.commit()
     for i in range(5):
         rank = (i+2) % 5
-        r = Ranking(user_id=1, display_set_id=1, display_item_id=i, rank=rank)
+        r = ItemRankInstance(set_rank_id=1, display_item_id=sri.id, rank=rank)
         db.session.add(r)
     db.session.commit()
     
-    
-add_dummy_data()
 
 
-def export_data():
-    data = db.session.query(Ranking, User, DisplayItem, DisplaySet).join(User).join(DisplayItem).join(DisplaySet).all()
-    
-    for r, u, di, ds in data:
-        pass
+def export_data(save_fn='output_data.csv'):
+    output_data = pd.DataFrame(
+    (db.session.query(
+        User.name,
+        DisplayItem.fn,
+        DisplayItem.display_set_id,
+        ItemRankInstance.rank,
+        SetRankInstance.comment)
+        .join(User)
+        .join(ItemRankInstance)
+        .join(DisplayItem)
+        .all())
+    )
+    output_data.to_csv(save_fn)
+    return output_data
     
 
 @app.route('/')
 def main():
     try:
         session['user_id']
+        session['user_name']
     except KeyError:
-        redirect('/user')
-        
-    ranked = Ranking.query.filter_by(user_id=session['user_id']).all()
+        logger.debug('user_id not set, redirecting to user page')
+        return redirect('/user')
+    if not db.session.query(User.id).filter(User.id==session['user_id'],
+                                        User.name==session['user_name']).scalar():
+        logger.debug('User ID %s name %s not in user ID list', session['user_id'], session['user_name'])
+        return redirect('/logout')
+    
+    ranked = SetRankInstance.query.filter_by(user_id=session['user_id']).all()
     
     display_sets = DisplaySet.query.all()
     display_sets = set([ds.id for ds in display_sets])
