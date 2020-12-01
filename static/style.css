@@ -8,6 +8,10 @@ ul {
 
 li {
   //float: left;
+  vertical-align: middle;
+  //align-items: center;
+  //justify-content: center;
+  
 }
 
 .im-col {
@@ -23,19 +27,21 @@ float: left;
 .small-im {
   height: 160px;
   width: 160px;
+  vertical-align: middle;
 }
 
 .big-im {
   height: auto;
   width: auto;
+  vertical-align: middle;
 }
 
 body {
     background-color: black;
     color: white;
-    
 }
 
 a {
   color: yellow;
 }
+

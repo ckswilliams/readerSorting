@@ -2,11 +2,13 @@ from flask import Flask, render_template, request, session, redirect
 from flask_sqlalchemy import SQLAlchemy
 
 
-from wtforms.ext.sqlalchemy.orm import model_form
+#from wtforms.ext.sqlalchemy.orm import model_form
 
 from flask_wtf import FlaskForm
 from wtforms import SelectField, TextField
 import json
+import pandas as pd
+
 import argparse
 
 
@@ -42,20 +44,29 @@ class DisplayItem(db.Model):
         self.display_set_id = display_set_id
         self.fn = fn
 
-
-class Ranking(db.Model):
-    __tablename__ = 'ranking'
+class SetRankInstance(db.Model):
+    __tablename__ = 'setrankinstance'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    
     display_set_id = db.Column(db.Integer,db.ForeignKey('displayset.id'))
-    display_item_id = db.Column(db.Integer,db.ForeignKey('displayitem.id'))
     user_id = db.Column(db.Integer,db.ForeignKey('user.id'))
     datetime = db.Column(db.DateTime,  default=db.func.current_timestamp())
-    rank = db.Column(db.Integer)
-
-    def __init__(self, user_id, display_set_id, display_item_id, rank):
+    comment = db.Column(db.String)
+    
+    def __init__(self, user_id, display_set_id, comment):
         self.user_id = user_id
         self.display_set_id = display_set_id
+        self.comment = comment
+
+
+class ItemRankInstance(db.Model):
+    __tablename__ = 'itemrankinstance'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    set_rank_id = db.Column(db.Integer,db.ForeignKey('setrankinstance.id'))
+    display_item_id = db.Column(db.Integer,db.ForeignKey('displayitem.id'))
+    rank = db.Column(db.Integer)
+
+    def __init__(self, set_rank_id, display_item_id, rank):
+        self.set_rank_id = set_rank_id
         self.display_item_id = display_item_id
         self.rank = rank
         
@@ -161,10 +172,7 @@ def main():
     image_info = db.session.query(DisplaySet, DisplayItem).filter_by(id=display_set_id).join(DisplayItem)
     enum_info = [(di.id, di.fn) for ds, di in image_info]
     
-    
-    print(session['user_name'])
-    print(session['user_id'])
- 
+    logger.debug('User info: %s, %s', session['user_name'], session['user_id'])
     
     return render_template('sort.html',
                            image_info=enum_info,
@@ -177,22 +185,36 @@ def main():
 def submitrank():
 
     json_postdata = request.json
+    
     logger.debug(f'Received POST - {json_postdata}')
-    ranks = [s.replace('&','') for s in json_postdata.split('item[]=')[1:]]
+    
+    rank_data = json_postdata['rankdata']
+    comment = json_postdata['comment']
+    
+    ranks = [s.replace('&','') for s in rank_data.split('item[]=')[1:]]
     
     display_set_id = session['display_set_id']
     user_id = session['user_id']
     
-    display_sets = db.session.query(DisplaySet, DisplayItem).filter_by(id=display_set_id).join(DisplayItem).all()
+    #display_sets = db.session.query(DisplaySet, DisplayItem).filter_by(id=display_set_id).join(DisplayItem).all()
     
-    display_item_ids = [di.id for ds, di in display_sets]
+    #display_item_ids = [di.id for ds, di in display_sets]
+    
+    sri = SetRankInstance(user_id=user_id, display_set_id=display_set_id, comment=comment)
+    db.session.add(sri)
+    db.session.commit()
     
     for rank, display_item_id in enumerate(ranks):
-        r = Ranking(user_id, display_set_id, display_item_id, rank)
+        r = ItemRankInstance(sri.id, display_item_id, rank)
         db.session.add(r)
     db.session.commit()
 
     return json.dumps({'success': True}), 200, {'ContentType': 'application/json'}
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    return redirect('/user')
 
 
 class UserForm(FlaskForm):
@@ -206,19 +228,22 @@ class NewUserForm(FlaskForm):
 @app.route('/user', methods=['GET', 'POST'])
 def login():
     form = UserForm()
-    form.name.choices = [(user.id, user.name) for user in User.query.all()]
+    users = User.query.all()
+    if len(users) == 0:
+        return redirect('/adduser')
+    
+    form.name.choices = [(user.id, user.name) for user in users]
     
     if request.method == 'POST':
-        print('test begin')
         print(form.name.data)
-        print('test end')
         session['user_id'] = form.name.data
         session['user_name'] = User.query.filter_by(id=form.name.data).first().name
 
         return redirect('/')
         
     return render_template('user.html',
-                           form=form)
+                           form=form,
+                           form_title='Change to a different user')
     
 @app.route('/adduser', methods=['GET', 'POST'])
 def adduser():

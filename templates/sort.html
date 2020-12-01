@@ -1,17 +1,18 @@
 <html>
   <head>
-    <title>Flask example</title>
+    <title>Sortable Image Quality Reader Review</title>
     <script src="{{ url_for('static', filename='js/jquery-1.12.4.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jquery-ui.js') }}"></script>
     <script>
         $(function(){
 			$('#submitNow').click(function(event, ui) {
                     var postData = $('#sortMe').sortable('serialize');
+                    var commentData = $('#commentInput').val();
 
                     $.ajax({
                         type: 'POST',
                         contentType: 'application/json',
-                        data: JSON.stringify(postData),
+                        data: JSON.stringify({rankdata: postData, comment: commentData}),
                         dataType: 'json',
                         url: '/submitrank',
                         success: function(response) {
@@ -39,11 +40,12 @@
      <div class="im-col">
     <ul id="sortMe">
     {% for i, fn in image_info %}
-        <li id="item_{{ i }}"><img class="small-im" src="/static/im/{{ fn }}"></li>
+        <li id="item_{{ i }}"><img class="small-im" src="/static/im/{{ fn }}">Image ref: {{ fn }}</li>
     {% endfor %}
     </ul>
     </div>
 	<div class="meta-col">
+	<textarea id="commentInput" cols="40" rows="6"></textarea>
 	<input type="submit" value="Submit Ranking" id="submitNow"></input>
 	</div>
 	<div class="meta-col">
